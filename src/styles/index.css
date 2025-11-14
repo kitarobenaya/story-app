@@ -10,7 +10,28 @@
   --animate-previewClose: previewClose 0.5s ease forwards;
   --animate-bgPreviewOpen: bgPreviewOpen 0.3s ease forwards;
   --animate-bgPreviewClose: bgPreviewClose 0.3s ease forwards;
+  --animate-mascotAddStory: mascotAddStory 0.5s ease forwards;
+  --animate-mascotEye: mascotEye 1.5s ease forwards;
 }
+
+.eyeAnim {
+  animation: eyeBlink 5s infinite;
+}
+
+@keyframes eyeBlink {
+  0%,
+  20%,
+  22%,
+  24%,
+  100% {
+    transform: scaleY(1);
+  }
+  21%,
+  23% {
+    transform: scaleY(0.1);
+  }
+}
+
 
 .ignielPelangi {
   background: linear-gradient(
@@ -119,4 +140,45 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: ignielGradient 12s ease infinite;
+}
+
+@keyframes mascotAddStory {
+  to {
+    top: 120px;
+    left: 35%;
+  }
+}
+
+@keyframes mascotEye {
+  0% {
+    bottom: 0.5rem;
+    right: 0;
+  }
+  40% {
+    bottom: 0;
+    right: 0;
+  }
+  70% {
+    bottom: 0;
+    right: 0.25rem;
+  }
+  100% {
+    bottom: 2px;
+    right: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
 }

@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 
-const StoryCard = ({ holdState }) => {
+const StoryCard = ({ holdState, url }) => {
   const [isHolding, setIsHolding] = useState(holdState);
   const timerRef = useRef(null);
   const videoRef = useRef(null);
+  const overlayRef = useRef(null);
+  const holdingRef = useRef(false);
   const [render, setRender] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -13,12 +15,10 @@ const StoryCard = ({ holdState }) => {
       setShowVideo(true);
     } else {
       setShowVideo(false);
-
       // Tunggu animasi close selesai sebelum unmount
       const timeout = setTimeout(() => {
         setRender(false);
       }, 500);
-
       return () => clearTimeout(timeout);
     }
   }, [isHolding]);
@@ -26,18 +26,27 @@ const StoryCard = ({ holdState }) => {
   // Mulai hitung long-press
   const handlePressStart = () => {
     setIsHolding(true);
+    holdingRef.current = true;
+
+    // mulai play setelah delay
     timerRef.current = setTimeout(() => {
-      videoRef.current?.play();
+      if (holdingRef.current) videoRef.current?.play();
     }, 500);
+
+    // pasang listener global, biar gak ke-reset saat re-render
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+    window.addEventListener("pointercancel", handleGlobalPointerUp);
   };
 
-  // Tamatkan hold / cancel
-  const handlePressEnd = (e) => {
-    e.preventDefault && e.preventDefault();
+  const handleGlobalPointerUp = () => {
+    holdingRef.current = false;
     setIsHolding(false);
     clearTimeout(timerRef.current);
-    // pause video ketika lepas
     videoRef.current?.pause();
+
+    // hapus listener biar gak numpuk
+    window.removeEventListener("pointerup", handleGlobalPointerUp);
+    window.removeEventListener("pointercancel", handleGlobalPointerUp);
   };
 
   // Mencegah menu konteks pada right-click / long-press
@@ -61,9 +70,10 @@ const StoryCard = ({ holdState }) => {
       )}
 
       <div
-        className={`customBorder size-[160px] ignielPelangi rounded-[24px] cursor-pointer relative flex justify-center items-center transition-all duration-300 ${
+        className={`customBorder size-40 ignielPelangi rounded-3xl cursor-pointer relative flex justify-center items-center transition-all duration-300 ${
           isHolding ? "z-50" : "z-10"
         }`}
+        onContextMenu={handleContextMenu}
       >
         <section
           className={`video-1 ${
@@ -78,7 +88,7 @@ const StoryCard = ({ holdState }) => {
           {/* Video element: atribut tambahan */}
           <video
             ref={videoRef}
-            src="/video/video.mp4"
+            src={url}
             className="size-full object-cover rounded-[20px]"
             playsInline
             muted={true}
@@ -92,18 +102,10 @@ const StoryCard = ({ holdState }) => {
           />
 
           <div
+            ref={overlayRef}
             className="absolute inset-0"
-            // mouse events (desktop)
-            onMouseDown={handlePressStart}
-            onMouseUp={handlePressEnd}
-            onMouseLeave={handlePressEnd}
-            // touch events (mobile)
-            onTouchStart={handlePressStart}
-            onTouchEnd={handlePressEnd}
-            onTouchCancel={handlePressEnd}
-            // cegah contextmenu pada overlay juga
-            onContextMenu={handleContextMenu}
-            // pastikan overlay di atas video
+            onPointerDown={handlePressStart}
+            onContextMenu={(e) => e.preventDefault()}
             style={{ zIndex: 20 }}
           ></div>
         </section>
