@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 export function getAnonId() {
     const STORAGE_KEY = 'anonId';
     
@@ -6,7 +8,7 @@ export function getAnonId() {
     
     // If it doesn't exist, generate a new one and store it
     if (!anonId) {
-      anonId = crypto.randomUUID();
+      anonId = nanoid();
       localStorage.setItem(STORAGE_KEY, anonId);
     }
     

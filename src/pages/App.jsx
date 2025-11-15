@@ -1,23 +1,27 @@
-import {useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import StoryCard from "../components/StoryCard";
 import UploadModal from "../components/UploadModal";
+import EditModal from "../components/EditModal";
+import Loading from "../components/Loading";
 import useStories from "../hooks/useStories";
-import useUpload from "../hooks/useUpload";
-import { insertStory } from "../lib/api";
 
 export default function App() {
-  const stories = useStories(localStorage.getItem("anonId"));
+  const { stories, message, deleteStory, refetchStories } = useStories(
+    localStorage.getItem("anonId")
+  );
+  const isLoading = message === "Fetching...";
   const [mascot, setMascot] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
-  
+  const [editingStory, setEditingStory] = useState(null);
+
   const handleOpenAddForm = () => {
     setShowAddForm(true);
     setIsClosingModal(false);
     setMascot(false);
   };
-  
+
   const handleCloseAddForm = () => {
     setIsClosingModal(true);
     // Wait for animation to complete before unmounting
@@ -27,39 +31,19 @@ export default function App() {
     }, 300); // Match animation duration
   };
 
-  // ===== State & Function to handle submit at UploadModal
-  const anonId = localStorage.getItem("anonId");
-  const [notification, setNotification] = useState(null);
-  const [mediaFile, setMediaFile] = useState(null);
-  const [description, setDescription] = useState("");
-  const {isSubmitting, uploadFile} = useUpload();
-  const [mediaError, setMediaError] = useState("");
-  
-  const handleSubmitForAddStory = async (event) => {
-    event.preventDefault();
-    if (isSubmitting) return;
-
-    if (!mediaFile) {
-      setMediaError("Please select a valid media file before saving.");
-      return;
-    }
-    
-    setMediaError("");
-    const upload = await uploadFile(mediaFile);
-    
-    if (upload.success) {
-      insertStory(anonId, upload.filePath, description);
-      setNotification({ type: 'success', message: 'Story uploaded successfully!' });
-      // Reset form
-      setMediaFile(null);
-      setDescription("");
-      // Modal will auto-close with animation via UploadModal's useEffect
-    } else {
-      setNotification({ type: 'error', message: `Upload failed: ${upload.error}` });
-    }
+  const handleEditStory = (story) => {
+    setEditingStory(story);
   };
-  // ======
-  
+
+  const handleDeleteStory = async (id, file_path) => {
+    await deleteStory(id, file_path);
+  };
+
+  const handleEditSave = () => {
+    setEditingStory(null);
+    refetchStories();
+  };
+
   return (
     <>
       <Navbar />
@@ -78,38 +62,54 @@ export default function App() {
       {(showAddForm || isClosingModal) && (
         <UploadModal
           onClose={handleCloseAddForm}
-          notification={notification}
-          setNotification={setNotification}
-          mediaFile={mediaFile}
-          setMediaFile={setMediaFile}
-          mediaError={mediaError}
-          setMediaError={setMediaError}
-          description={description}
-          setDescription={setDescription}
-          isSubmitting={isSubmitting}
-          handleSubmitForAddStory={handleSubmitForAddStory}
+          refetchStories={refetchStories}
         />
       )}
 
+      {/* Edit Modal */}
+      {editingStory && (
+        <EditModal
+          story={editingStory}
+          onClose={() => setEditingStory(null)}
+          onSave={handleEditSave}
+        />
+      )}
+
+      {/* Show Loading when fetching */}
+      {isLoading && !showAddForm && <Loading />}
+
       {/* Show Mascot when mascot state is true */}
-      {mascot && !showAddForm && (
-        <Mascot styleBg="bg-black/70" styleMascot="animate-mascotAddStory" styleEye="animate-mascotEye">
+      {!isLoading && mascot && !showAddForm && (
+        <Mascot
+          styleBg="bg-black/70"
+          styleMascot="animate-mascotAddStory"
+          styleEye="animate-mascotEye"
+        >
           <MascotMessage message={"Let's add your first storyy!!!"} />
         </Mascot>
       )}
 
       {/* show up when data is empty */}
-      {stories.length === 0 && !mascot && !showAddForm && (
+      {!isLoading && stories.length === 0 && !mascot && !showAddForm && (
         <Mascot styleBg={""} styleMascot={""} styleEye={""}>
           <TypingMessage setMascot={setMascot} />
         </Mascot>
       )}
 
       {/* show up when data is not empty */}
-      {stories.length > 0 && (
+      {!isLoading && stories.length > 0 && (
         <main className="w-full grow flex flex-col items-center gap-10 p-4">
           {stories.map((story) => (
-            <StoryCard key={story.id} holdState={story.isHolding} url={story.url}/>
+            <StoryCard
+              key={story.id}
+              id={story.id}
+              url={story.url}
+              file_path={story.file_path}
+              story_type={story.file_type}
+              description={story.description}
+              onEdit={handleEditStory}
+              onDelete={handleDeleteStory}
+            />
           ))}
         </main>
       )}
@@ -117,36 +117,46 @@ export default function App() {
   );
 }
 
-function Mascot({children, styleBg, styleMascot, styleEye}) {
+function Mascot({ children, styleBg, styleMascot, styleEye }) {
   return (
     <>
-      <div className={`w-full min-h-screen absolute flex items-center justify-center z-10 ${styleBg}`}>
+      <div
+        className={`w-full min-h-screen absolute flex items-center justify-center z-10 ${styleBg}`}
+      >
         <div className="mascot-road min-h-screen w-full relative">
-
-            <div className={`wrapper absolute w-fit h-fit flex flex-col justify-center items-center left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${styleMascot}`}>
-              <div className="head size-[120px] bg-[#FFDEB9] rounded-full relative">
-                <div className="eyeBall1 w-10 h-5 bg-white rounded-[50%] flex justify-center items-center absolute top-[30%] left-[12%] eyeAnim">
-                  <div className={`eyeBlack w-4 h-4 bg-black rounded-full absolute ${styleEye !== "" ? styleEye : 'bottom-2'}`}></div>
-                </div>
-                <div className="eyeBall2 w-10 h-5 bg-white rounded-[50%] flex justify-center items-center absolute top-[30%] right-[12%] eyeAnim">
-                  <div className={`eyeBlack w-4 h-4 bg-black rounded-full absolute ${styleEye !== "" ? styleEye : 'bottom-2'}`}></div>
-                </div>
+          <div
+            className={`wrapper absolute w-fit h-fit flex flex-col justify-center items-center left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${styleMascot}`}
+          >
+            <div className="head size-[120px] bg-[#FFDEB9] rounded-full relative">
+              <div className="eyeBall1 w-10 h-5 bg-white rounded-[50%] flex justify-center items-center absolute top-[30%] left-[12%] eyeAnim">
+                <div
+                  className={`eyeBlack w-4 h-4 bg-black rounded-full absolute ${
+                    styleEye !== "" ? styleEye : "bottom-2"
+                  }`}
+                ></div>
               </div>
-              {children}
+              <div className="eyeBall2 w-10 h-5 bg-white rounded-[50%] flex justify-center items-center absolute top-[30%] right-[12%] eyeAnim">
+                <div
+                  className={`eyeBlack w-4 h-4 bg-black rounded-full absolute ${
+                    styleEye !== "" ? styleEye : "bottom-2"
+                  }`}
+                ></div>
+              </div>
             </div>
-
+            {children}
+          </div>
         </div>
       </div>
     </>
-  )
+  );
 }
 
 const messages = [
-"Looks like you don't have any stories yet.",
-"Wanna add one?",
+  "Looks like you don't have any stories yet.",
+  "Wanna add one?",
 ];
 
-function TypingMessage({setMascot}) {
+function TypingMessage({ setMascot }) {
   const [text, setText] = useState("");
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
@@ -176,9 +186,12 @@ function TypingMessage({setMascot}) {
       return;
     }
 
-    const timeout = setTimeout(() => {
-      setSubIndex((prev) => prev + (deleting ? -1 : 1));
-    }, deleting ? 30 : 70);
+    const timeout = setTimeout(
+      () => {
+        setSubIndex((prev) => prev + (deleting ? -1 : 1));
+      },
+      deleting ? 30 : 70
+    );
 
     return () => clearTimeout(timeout);
   }, [subIndex, deleting, index]);
@@ -206,21 +219,21 @@ function TypingMessage({setMascot}) {
   );
 }
 
-function MascotMessage({message}) {
+function MascotMessage({ message }) {
   const [text, setText] = useState("");
   const [subIndex, setSubIndex] = useState(0);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       setSubIndex((prev) => prev + 1);
-    }, 80)
+    }, 80);
 
     return () => clearTimeout(timeout);
   }, [subIndex]);
 
   useEffect(() => {
     setText(message.substring(0, subIndex));
-  }, [subIndex, message])
+  }, [subIndex, message]);
 
   return (
     <div className="message rounded-full rounded-bl-none w-[150px] h-[100px] flex flex-col justify-center items-center bg-white absolute left-[50%] top-[-60%] p-5">
@@ -229,5 +242,5 @@ function MascotMessage({message}) {
         <span className="animate-pulse">|</span>
       </h2>
     </div>
-  )
+  );
 }

@@ -1,13 +1,59 @@
 import {useEffect, useState, useRef, useCallback} from "react";
 import {createPortal} from "react-dom";
+import NotificationToast from "./NotificationToast";
+import { insertStory } from "../lib/api";
+import useUpload from "../hooks/useUpload";
 
 const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024; // 40 MB
 
-export default function UploadModal({onClose, notification, setNotification, mediaFile, setMediaFile, mediaError, setMediaError, description, setDescription, isSubmitting, handleSubmitForAddStory}) {
+export default function UploadModal({onClose, refetchStories}) {
  
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
   const fileInputRef = useRef(null);
+  const anonId = localStorage.getItem("anonId");
+  const [notification, setNotification] = useState(null);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [description, setDescription] = useState("");
+  const { isSubmitting, uploadFile } = useUpload();
+  const [mediaError, setMediaError] = useState("");
+
+  const handleSubmitForAddStory = async (event) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+
+    if (!mediaFile) {
+      setMediaError("Please select a valid media file before saving.");
+      return;
+    }
+
+    setMediaError("");
+    const upload = await uploadFile(mediaFile);
+
+    if (upload.success) {
+      await insertStory(
+        anonId,
+        upload.filePath,
+        description,
+        mediaFile.type.startsWith("video/") ? "video" : "image"
+      );
+      setNotification({
+        type: "success",
+        message: "Story uploaded successfully!",
+      });
+      // Reset form
+      setMediaFile(null);
+      setDescription("");
+      // Refetch stories to show the new story in real-time
+      refetchStories();
+      // Modal will auto-close with animation via UploadModal's useEffect
+    } else {
+      setNotification({
+        type: "error",
+        message: `Upload failed: ${upload.error}`,
+      });
+    }
+  };
 
   // Trigger opening animation
   useEffect(() => {
@@ -20,8 +66,11 @@ export default function UploadModal({onClose, notification, setNotification, med
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
-    // Call onClose immediately - parent will handle unmounting after animation
-    onClose?.();
+    // Clear notification when closing
+    setNotification(null);
+    setTimeout(() => {
+      onClose?.();
+    }, 300); // Match animation duration
   }, [onClose]);
 
   const handleMediaChange = (event) => {
@@ -203,74 +252,6 @@ export default function UploadModal({onClose, notification, setNotification, med
         </div>
       </div>
     </>
-  );
-}
-
-function NotificationToast({ type, message, onClose }) {
-  const isSuccess = type === 'success';
-  
-  return (
-    <div className="fixed top-4 right-4 z-9999 animate-slide-in">
-      <div
-        className={`flex items-center gap-3 rounded-2xl border px-6 py-4 shadow-2xl ${
-          isSuccess
-            ? 'border-green-500/50 bg-green-500/40 text-green-200'
-            : 'border-red-500/50 bg-red-500/40 text-red-200'
-        }`}
-      >
-        <div className="shrink-0">
-          {isSuccess ? (
-            <svg
-              className="h-6 w-6 text-green-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="h-6 w-6 text-red-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          )}
-        </div>
-        <p className="font-poppins text-sm font-semibold">{message}</p>
-        <button
-          onClick={onClose}
-          className="ml-2 shrink-0 text-white/60 hover:text-white transition"
-          aria-label="Close notification"
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
   );
 }
 

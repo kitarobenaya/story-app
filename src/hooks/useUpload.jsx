@@ -11,7 +11,7 @@ const useUpload = () => {
             // genereate unique name
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}.${fileExt}`;
-            const filePath = `videos/${fileName}`;
+            const filePath = `${file.type.startsWith("video/") ? "videos" : "images"}/${fileName}`;
     
             const {_, error} = await supabase.storage
             .from('stories_bucket')

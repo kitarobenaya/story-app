@@ -1,14 +1,31 @@
 import { useState, useRef, useEffect } from "react";
 
-const StoryCard = ({ holdState, url }) => {
-  const [isHolding, setIsHolding] = useState(holdState);
+const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDelete }) => {
+  const [isHolding, setIsHolding] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(
+    () => window.matchMedia("(hover: none) and (pointer: coarse)").matches
+  );
   const timerRef = useRef(null);
   const videoRef = useRef(null);
   const overlayRef = useRef(null);
   const holdingRef = useRef(false);
   const [render, setRender] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
+  const cardRef = useRef(null);
 
+  useEffect(() => {
+    const handleMediaChange = (e) => {
+      setIsTouchDevice(e.matches);
+    };
+
+    const mediaQuery = window.matchMedia("(hover: none) and (pointer: coarse)");
+    mediaQuery.addEventListener("change", handleMediaChange);
+
+    return () => mediaQuery.removeEventListener("change", handleMediaChange);
+  }, []);
+
+  // Hide actions when holding/preview is active
   useEffect(() => {
     if (isHolding) {
       setRender(true);
@@ -33,7 +50,6 @@ const StoryCard = ({ holdState, url }) => {
       if (holdingRef.current) videoRef.current?.play();
     }, 500);
 
-    // pasang listener global, biar gak ke-reset saat re-render
     window.addEventListener("pointerup", handleGlobalPointerUp);
     window.addEventListener("pointercancel", handleGlobalPointerUp);
   };
@@ -59,6 +75,27 @@ const StoryCard = ({ holdState, url }) => {
     e.preventDefault();
   };
 
+  const handleMouseEnter = () => {
+    setShowActions(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowActions(false);
+  };
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    onEdit({ id, description, url, file_path, story_type });
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this story?")) {
+      console.log(file_path);
+      onDelete(id, file_path);
+    }
+  };
+
   return (
     <>
       {render && (
@@ -70,14 +107,21 @@ const StoryCard = ({ holdState, url }) => {
       )}
 
       <div
+        ref={cardRef}
         className={`customBorder size-40 ignielPelangi rounded-3xl cursor-pointer relative flex justify-center items-center transition-all duration-300 ${
           isHolding ? "z-50" : "z-10"
         }`}
         onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <section
           className={`video-1 ${
-            showVideo ? "animate-previewOpen" : "animate-previewClose"
+            render
+              ? showVideo
+                ? "animate-previewOpen"
+                : "animate-previewClose"
+              : ""
           } size-[150px] rounded-[20px] absolute overflow-hidden`}
           // nonaktifkan callout / selection untuk mobile
           style={{
@@ -85,21 +129,27 @@ const StoryCard = ({ holdState, url }) => {
             userSelect: "none",
           }}
         >
-          {/* Video element: atribut tambahan */}
-          <video
-            ref={videoRef}
-            src={url}
-            className="size-full object-cover rounded-[20px]"
-            playsInline
-            muted={true}
-            // untuk autoplay on mobile biasanya harus muted
-            controls={false} // sembunyikan controls (atau set true jika mau)
-            draggable={false}
-            onContextMenu={handleContextMenu}
-            onDragStart={handleDragStart}
-            // controlsList mencegah tombol download pada browser yang support
-            controlsList="nodownload noremoteplayback"
-          />
+          {story_type === "video" ? (
+            <video
+              ref={videoRef}
+              src={url}
+              className="size-full object-cover rounded-[20px]"
+              playsInline
+              muted={true}
+              controls={false} // sembunyikan controls
+              draggable={false}
+              onContextMenu={handleContextMenu}
+              onDragStart={handleDragStart}
+              // controlsList mencegah tombol download pada browser yang support
+              controlsList="nodownload noremoteplayback"
+            />
+          ) : (
+            <img
+              src={url}
+              className="size-full object-cover rounded-[20px]"
+              alt=""
+            />
+          )}
 
           <div
             ref={overlayRef}
@@ -109,6 +159,50 @@ const StoryCard = ({ holdState, url }) => {
             style={{ zIndex: 20 }}
           ></div>
         </section>
+
+        {/* Action Buttons - always show on touch devices, hover on desktop */}
+        {(showActions || isTouchDevice) && isHolding === false && (
+          <div className="absolute top-2 right-2 flex gap-2 z-30 bg-black/60 rounded-lg p-2 backdrop-blur-sm">
+            <button
+              onClick={handleEditClick}
+              className="p-1.5 bg-[#E91E63] hover:bg-[#FF9800] rounded-md transition-colors duration-200"
+              title="Edit"
+            >
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={handleDeleteClick}
+              className="p-1.5 bg-red-600 hover:bg-red-700 rounded-md transition-colors duration-200"
+              title="Delete"
+            >
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
