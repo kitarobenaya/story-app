@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 
-const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDelete }) => {
+const StoryCard = ({
+  url,
+  file_path,
+  story_type,
+  id,
+  description,
+  onEdit,
+  onDelete,
+  setIsPlaying
+}) => {
   const [isHolding, setIsHolding] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(
@@ -10,6 +19,7 @@ const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDele
   const videoRef = useRef(null);
   const overlayRef = useRef(null);
   const holdingRef = useRef(false);
+  const recentlyHeldRef = useRef(false);
   const [render, setRender] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const cardRef = useRef(null);
@@ -42,11 +52,11 @@ const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDele
 
   // Mulai hitung long-press
   const handlePressStart = () => {
-    setIsHolding(true);
     holdingRef.current = true;
 
     // mulai play setelah delay
     timerRef.current = setTimeout(() => {
+      setIsHolding(true);
       if (holdingRef.current) videoRef.current?.play();
     }, 500);
 
@@ -63,6 +73,9 @@ const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDele
     // hapus listener biar gak numpuk
     window.removeEventListener("pointerup", handleGlobalPointerUp);
     window.removeEventListener("pointercancel", handleGlobalPointerUp);
+    // mark that long-press happened, so click doesn't also open player
+    recentlyHeldRef.current = true;
+    setTimeout(() => (recentlyHeldRef.current = false), 500);
   };
 
   // Mencegah menu konteks pada right-click / long-press
@@ -108,7 +121,7 @@ const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDele
 
       <div
         ref={cardRef}
-        className={`customBorder size-40 ignielPelangi rounded-3xl cursor-pointer relative flex justify-center items-center transition-all duration-300 ${
+        className={`story-card customBorder size-40 ignielPelangi rounded-3xl cursor-pointer relative flex justify-center items-center transition-all duration-300 ${
           isHolding ? "z-50" : "z-10"
         }`}
         onContextMenu={handleContextMenu}
@@ -155,6 +168,11 @@ const StoryCard = ({ url, file_path, story_type, id, description, onEdit, onDele
             ref={overlayRef}
             className="absolute inset-0"
             onPointerDown={handlePressStart}
+            onClick={() => {
+              if (!isHolding) {
+                setIsPlaying((prev) => ({url, story_type, bool: !prev.bool }));
+              }
+            }}
             onContextMenu={(e) => e.preventDefault()}
             style={{ zIndex: 20 }}
           ></div>

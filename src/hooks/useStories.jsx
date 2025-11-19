@@ -13,7 +13,7 @@ const useStories = (anonId) => {
     try {
       const { data: storiesData, error } = await supabase
         .from("stories")
-        .select("*")
+        .select("id, file_path, file_type, description, created_at")
         .eq("anon_id", anonId)
         .order("created_at", { ascending: false });
 

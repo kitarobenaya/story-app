@@ -5,6 +5,7 @@ import UploadModal from "../components/UploadModal";
 import EditModal from "../components/EditModal";
 import Loading from "../components/Loading";
 import useStories from "../hooks/useStories";
+import StoryPlayer from "../components/StoryPlayer";
 
 export default function App() {
   const { stories, message, deleteStory, refetchStories } = useStories(
@@ -15,6 +16,7 @@ export default function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [editingStory, setEditingStory] = useState(null);
+  const [isPlaying, setIsPlaying] = useState({ bool: false });
 
   const handleOpenAddForm = () => {
     setShowAddForm(true);
@@ -109,9 +111,18 @@ export default function App() {
               description={story.description}
               onEdit={handleEditStory}
               onDelete={handleDeleteStory}
+              setIsPlaying={setIsPlaying}
             />
           ))}
         </main>
+      )}
+
+      {isPlaying.bool && (
+        <StoryPlayer
+          story_type={isPlaying.story_type}
+          story_url={isPlaying.url}
+          setIsPlaying={setIsPlaying}
+        />
       )}
     </>
   );
