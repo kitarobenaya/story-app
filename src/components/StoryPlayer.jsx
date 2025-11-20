@@ -39,12 +39,14 @@ const StoryPlayer = ({ story_type, story_url, setIsPlaying }) => {
   };
 
   useEffect(() => {
-    if (isHolding && isPaused) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play();
+    if (story_type === "video") {
+      if (isHolding && isPaused) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
     }
-  }, [isHolding, isPaused]);
+  }, [isHolding, isPaused, story_type]);
 
   const preventDefault = (e) => {
     e.preventDefault();
@@ -75,7 +77,7 @@ const StoryPlayer = ({ story_type, story_url, setIsPlaying }) => {
             <>
               {Array.from({ length: stories }, (_, index) => (
                 <div
-                key={index}
+                  key={index}
                   className={`progress-bar w-[${Math.round(
                     100 / stories
                   )}%] h-full rounded-full bg-gray-500 relative overflow-hidden`}
@@ -87,7 +89,7 @@ const StoryPlayer = ({ story_type, story_url, setIsPlaying }) => {
           }
         </div>
 
-        <div className="button-wrapper size-fit absolute right-6 top-10 flex justify-center items-center flex-row gap-x-4">
+        <div className="button-wrapper size-fit absolute right-6 top-10 flex justify-center items-center flex-row gap-x-4 z-30">
           {/* button close story player */}
           <button
             onClick={() => setIsPlaying(false)}

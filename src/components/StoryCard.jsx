@@ -8,7 +8,7 @@ const StoryCard = ({
   description,
   onEdit,
   onDelete,
-  setIsPlaying
+  setIsPlaying,
 }) => {
   const [isHolding, setIsHolding] = useState(false);
   const [showActions, setShowActions] = useState(false);
@@ -66,16 +66,18 @@ const StoryCard = ({
 
   const handleGlobalPointerUp = () => {
     holdingRef.current = false;
-    setIsHolding(false);
     clearTimeout(timerRef.current);
     videoRef.current?.pause();
-
+    
     // hapus listener biar gak numpuk
     window.removeEventListener("pointerup", handleGlobalPointerUp);
     window.removeEventListener("pointercancel", handleGlobalPointerUp);
     // mark that long-press happened, so click doesn't also open player
     recentlyHeldRef.current = true;
-    setTimeout(() => (recentlyHeldRef.current = false), 500);
+    setTimeout(() => {
+      setIsHolding(false);
+      recentlyHeldRef.current = false;
+    }, 100);
   };
 
   // Mencegah menu konteks pada right-click / long-press
@@ -168,10 +170,10 @@ const StoryCard = ({
             ref={overlayRef}
             className="absolute inset-0"
             onPointerDown={handlePressStart}
-            onClick={() => {
-              if (!isHolding) {
-                setIsPlaying((prev) => ({url, story_type, bool: !prev.bool }));
-              }
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isHolding)
+                setIsPlaying((prev) => ({ url, story_type, bool: !prev.bool }));
             }}
             onContextMenu={(e) => e.preventDefault()}
             style={{ zIndex: 20 }}
