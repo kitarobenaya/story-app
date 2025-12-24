@@ -1,4 +1,6 @@
-const Navbar = () => {
+import { memo } from "react";
+
+const Navbar = memo(() => {
   return (
     <header className="w-full h-20 flex justify-center items-center">
       <div className="wrapper size-fit relative flex justify-center items-center">
@@ -13,6 +15,6 @@ const Navbar = () => {
       </div>
     </header>
   );
-};
+});
 
 export default Navbar;

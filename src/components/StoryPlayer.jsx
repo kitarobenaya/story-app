@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Icon } from "@iconify/react";
-const StoryPlayer = ({ story_type, story_url, setIsPlaying }) => {
+const StoryPlayer = memo(({ story_type, story_url, setIsPlaying }) => {
   const [isTouchDevice, setIsTouchDevice] = useState(
     () => window.matchMedia("(hover: none) and (pointer: coarse)").matches
   );
@@ -150,6 +150,6 @@ const StoryPlayer = ({ story_type, story_url, setIsPlaying }) => {
       </section>
     </div>
   );
-};
+});
 
 export default StoryPlayer;

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-export function getAnonId() {
+export default function getAnonId() {
     const STORAGE_KEY = 'anonId';
     
     // Check if anonId already exists in localStorage

@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
+import useStories from "../hooks/useStories";
+import useStoryExpiration from "../hooks/useStoryExpiration";
 import Navbar from "../components/Navbar";
 import StoryCard from "../components/StoryCard";
 import UploadModal from "../components/UploadModal";
 import EditModal from "../components/EditModal";
 import Loading from "../components/Loading";
-import useStories from "../hooks/useStories";
 import StoryPlayer from "../components/StoryPlayer";
 
 export default function App() {
   const { stories, message, deleteStory, refetchStories } = useStories(
     localStorage.getItem("anonId")
   );
+  useStoryExpiration(stories);
   const isLoading = message === "Fetching...";
   const [mascot, setMascot] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -109,6 +111,7 @@ export default function App() {
               file_path={story.file_path}
               story_type={story.file_type}
               description={story.description}
+              created_at={story.created_at}
               onEdit={handleEditStory}
               onDelete={handleDeleteStory}
               setIsPlaying={setIsPlaying}
